@@ -48,7 +48,7 @@ except FileNotFoundError:
 # Charger l'image de la croix pour fermer
 try:
     cross_image = pygame.image.load("exit-cross.png").convert_alpha()
-    CROSS_SIZE = 30
+    CROSS_SIZE = 50
     cross_image = pygame.transform.smoothscale(cross_image, (CROSS_SIZE, CROSS_SIZE))
 except FileNotFoundError:
     print("⚠️ Image 'exit-cross.png' non trouvée. Utilisation d'une croix textuelle.")
@@ -83,6 +83,58 @@ CELL_SIZE_BASE = 10 if max(ORIGINAL_WIDTH, ORIGINAL_HEIGHT) <= 500 else 20
 # Variables d'état
 drawing = False
 erasing = False
+
+# Police
+toolbar_font = pygame.font.SysFont(None, 24)
+
+# Dimensions de la barre d'outils
+TOOLBAR_HEIGHT = 40
+BUTTON_WIDTH = 80
+BUTTON_HEIGHT = 30
+BUTTON_MARGIN = 10
+
+# Position des boutons
+btn_load_rect = pygame.Rect(BUTTON_MARGIN, 5, BUTTON_WIDTH, BUTTON_HEIGHT)
+btn_save_rect = pygame.Rect(BUTTON_MARGIN + BUTTON_WIDTH + 10, 5, BUTTON_WIDTH, BUTTON_HEIGHT)
+btn_change_bg_rect = pygame.Rect(BUTTON_MARGIN + (BUTTON_WIDTH + 10) * 2, 5, BUTTON_WIDTH, BUTTON_HEIGHT)
+
+# Couleurs
+TOOLBAR_COLOR = (50, 50, 50)
+BUTTON_COLOR = (100, 100, 200)
+BUTTON_HOVER = (130, 130, 230)
+TEXT_COLOR = (255, 255, 255)
+
+# Exit-Cross
+CROSS_Y = (TOOLBAR_HEIGHT // 2) - (CROSS_SIZE // 2)
+
+def draw_toolbar(screen):
+    # Fond de la barre
+    pygame.draw.rect(screen, TOOLBAR_COLOR, (0, 0, SCREEN_WIDTH, TOOLBAR_HEIGHT))
+
+    # Bouton Charger
+    btn_rect = btn_load_rect
+    mouse_pos = pygame.mouse.get_pos()
+    color = BUTTON_HOVER if btn_rect.collidepoint(mouse_pos) else BUTTON_COLOR
+    pygame.draw.rect(screen, color, btn_rect)
+    text = toolbar_font.render("Charger", True, TEXT_COLOR)
+    text_rect = text.get_rect(center=btn_rect.center)
+    screen.blit(text, text_rect)
+
+    # Bouton Sauver
+    btn_rect = btn_save_rect
+    color = BUTTON_HOVER if btn_rect.collidepoint(mouse_pos) else BUTTON_COLOR
+    pygame.draw.rect(screen, color, btn_rect)
+    text = toolbar_font.render("Sauver", True, TEXT_COLOR)
+    text_rect = text.get_rect(center=btn_rect.center)
+    screen.blit(text, text_rect)
+
+    # Bouton Changer BG
+    btn_rect = btn_change_bg_rect
+    color = BUTTON_HOVER if btn_rect.collidepoint(mouse_pos) else BUTTON_COLOR
+    pygame.draw.rect(screen, color, btn_rect)
+    text = toolbar_font.render("Changer BG", True, TEXT_COLOR)
+    text_rect = text.get_rect(center=btn_rect.center)
+    screen.blit(text, text_rect)
 
 # Fonction pour load un fichier .nonogram
 def load_nonogram():
@@ -229,6 +281,45 @@ while running:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             x_screen, y_screen = pygame.mouse.get_pos()
 
+            # Vérifier si clic sur "Charger"
+            if btn_load_rect.collidepoint(x_screen, y_screen):
+                loaded_data = load_nonogram()
+                if loaded_data:
+                    background_image = loaded_data["background"]
+                    zoom_factor = 0.5
+                    print("✅ Fichier chargé avec succès.")
+
+            # Vérifier si clic sur "Sauver"
+            elif btn_save_rect.collidepoint(x_screen, y_screen):
+                solution = get_solution()
+                row_clues, col_clues = generate_clues(solution)
+                save_nonogram(solution, row_clues, col_clues, background_image)
+                print("✅ Fichier sauvegardé.")
+
+            # Vérifier si clic sur "Changer BG"
+            elif btn_change_bg_rect.collidepoint(x_screen, y_screen):
+                root = Tk()
+                root.withdraw()
+                file_path = filedialog.askopenfilename(
+                    title="Sélectionner une nouvelle image d'arrière-plan",
+                    filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp *.gif")]
+                )
+                if file_path:
+                    try:
+                        new_bg = pygame.image.load(file_path).convert_alpha()  # Pour PNG transparents
+                        background_image = new_bg
+                        ORIGINAL_WIDTH, ORIGINAL_HEIGHT = background_image.get_size()
+
+                        # Ajuster la surface de dessin à la nouvelle taille
+                        new_drawing = pygame.Surface((ORIGINAL_WIDTH, ORIGINAL_HEIGHT), pygame.SRCALPHA)
+                        new_drawing.fill((0, 0, 0, 0))  # Transparence totale
+                        drawing_surface = new_drawing
+
+                        zoom_factor = 0.5  # Réinitialiser le zoom
+                        print("✅ Nouvelle image d’arrière-plan chargée.")
+                    except Exception as e:
+                        print(f"❌ Impossible de charger l'image : {e}")
+
             img_width_zoomed = int(ORIGINAL_WIDTH * zoom_factor)
             img_height_zoomed = int(ORIGINAL_HEIGHT * zoom_factor)
             offset_x = (SCREEN_WIDTH - img_width_zoomed) // 2
@@ -326,14 +417,21 @@ while running:
         pygame.draw.line(grid_surf, GRID_COLOR, (0, y * zoom_factor), (img_width_zoomed, y * zoom_factor), 1)
     screen.blit(grid_surf, (offset_x, offset_y))
 
+    draw_toolbar(screen)
+
     # Croix de fermeture
     if cross_image:
-        screen.blit(cross_image, (SCREEN_WIDTH - 40, 10))
+        screen.blit(cross_image, (SCREEN_WIDTH - 40, CROSS_Y))
     else:
-        font = pygame.font.SysFont(None, 36)
-        cross_text = font.render("✕", True, (255, 255, 255))
-        screen.blit(cross_text, (SCREEN_WIDTH - 35, 10))
-
+        # Fond rond pour améliorer la visibilité
+        cross_center = (SCREEN_WIDTH - 25, 25)
+        pygame.draw.circle(screen, (0, 0, 0, 180), cross_center, 20)  # Cercle noir semi-transparent
+        # Texte blanc centré
+        font = pygame.font.SysFont(None, 48)  # Police plus grosse
+        cross_text = font.render("✕", True, (255, 255, 255))  # Croix blanche
+        text_rect = cross_text.get_rect(center=cross_center)
+        screen.blit(cross_text, text_rect)
+        
     pygame.display.flip()
 
 # Quitter proprement
