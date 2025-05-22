@@ -1,7 +1,7 @@
 import pygame
 import sys
 
-#bonjour
+
 # Constantes
 CELL_SIZE = 40
 GRID_SIZE = 5
