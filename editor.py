@@ -434,6 +434,6 @@ while running:
         
     pygame.display.flip()
 
-# Quitter proprement l'éditeur
+# Quitter proprement
 pygame.quit()
 sys.exit()
