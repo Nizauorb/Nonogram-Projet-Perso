@@ -39,7 +39,7 @@ pygame.display.set_caption("Initialisation...")
 
 # Charger l'image de fond
 try:
-    background_image = pygame.image.load("assets/background.png").convert_alpha()
+    background_image = pygame.image.load("assets/empty-background.png").convert_alpha()
 except FileNotFoundError:
     print("❌ Fichier 'background.png' introuvable.")
     pygame.quit()
@@ -60,7 +60,7 @@ ORIGINAL_WIDTH, ORIGINAL_HEIGHT = background_image.get_size()
 # Réinitialiser la fenêtre en plein écran
 screen = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
 SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
-pygame.display.set_caption("Nonogram - Vue Zoomable et Centrée")
+pygame.display.set_caption("Nonogram - Revolution")
 
 # Réglages de zoom
 ZOOM_STEP = 1.2
@@ -72,9 +72,9 @@ zoom_factor = 0.5  # Lancement dézoomé
 drawing_surface = pygame.Surface((ORIGINAL_WIDTH, ORIGINAL_HEIGHT), pygame.SRCALPHA)
 
 # Couleurs
-DRAW_COLOR = (0, 0, 255, 150)
+DRAW_COLOR = (20, 20, 20, 150)
 ERASE_COLOR = (0, 0, 0, 0)
-GRID_COLOR = (200, 200, 200, 100)
+GRID_COLOR = (120, 120, 120, 100)
 BACKGROUND_COLOR = (230, 230, 230)
 
 # Taille des blocs
@@ -421,16 +421,7 @@ while running:
 
     # Croix de fermeture
     if cross_image:
-        screen.blit(cross_image, (SCREEN_WIDTH - 40, CROSS_Y))
-    else:
-        # Fond rond pour améliorer la visibilité
-        cross_center = (SCREEN_WIDTH - 25, 25)
-        pygame.draw.circle(screen, (0, 0, 0, 180), cross_center, 20)  # Cercle noir semi-transparent
-        # Texte blanc centré
-        font = pygame.font.SysFont(None, 48)  # Police plus grosse
-        cross_text = font.render("✕", True, (255, 255, 255))  # Croix blanche
-        text_rect = cross_text.get_rect(center=cross_center)
-        screen.blit(cross_text, text_rect)
+        screen.blit(cross_image, (SCREEN_WIDTH - 60, CROSS_Y + 15))
         
     pygame.display.flip()
 
