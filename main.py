@@ -54,6 +54,10 @@ col_clues = []
 player_grid = []
 
 
+drag_new_value = None  # Valeur à appliquer pendant le drag
+dragged_cells = []     # Liste des cellules déjà modifiées pendant le drag
+
+
 def load_level():
     global solution, row_clues, col_clues, player_grid
     level = levels[current_level]
@@ -90,13 +94,6 @@ def draw_menu():
     rects['editor'] = editor_rect
     rects['quit'] = quit_rect
     rects['fullscreen'] = fullscreen_rect
-
-
-    
-  
-    
-
-
     return rects
 
 
@@ -118,12 +115,18 @@ def draw_grid():
     grid_height = CELL_SIZE * (GRID_SIZE + 3)
     offset_x = (screen.get_width() - grid_width) // 2
     offset_y = (screen.get_height() - grid_height) // 2
+
+
     for i, clues in enumerate(row_clues):
         text = " ".join(str(c) for c in clues)
         draw_text(text, (offset_x + 5, offset_y + (i+2)*CELL_SIZE + 10))
+
+
     for j, clues in enumerate(col_clues):
         for k, num in enumerate(reversed(clues)):
             draw_text(str(num), (offset_x + (j+2)*CELL_SIZE + 10, offset_y + (1-k)*15 + 10))
+
+
     for row in range(GRID_SIZE):
         for col in range(GRID_SIZE):
             rect = pygame.Rect(offset_x + (col+2)*CELL_SIZE, offset_y + (row+2)*CELL_SIZE, CELL_SIZE, CELL_SIZE)
@@ -133,6 +136,8 @@ def draw_grid():
             elif player_grid[row][col] == 0:
                 pygame.draw.line(screen, (0,0,0), rect.topleft, rect.bottomright, 2)
                 pygame.draw.line(screen, (0,0,0), rect.topright, rect.bottomleft, 2)
+
+
     cross_rect = draw_cross_button()
     if check_victory():
         draw_text("Bravo ! Puzzle complété !", (offset_x + CELL_SIZE, offset_y + CELL_SIZE), (0,150,0))
@@ -147,6 +152,7 @@ def get_cell_from_pos(pos, offset_x, offset_y):
         return row, col
     return None, None
 
+
 def check_victory():
     for i in range(GRID_SIZE):
         for j in range(GRID_SIZE):
@@ -155,6 +161,7 @@ def check_victory():
             if solution[i][j] == 0 and player_grid[i][j] == 1:
                 return False
     return True
+
 
 def switch_level():
     global current_level
@@ -178,7 +185,6 @@ load_level()
 menu_rects = {}
 dragging = False
 drag_button = None
-dragged_cells = []
 
 
 # Boucle principale
@@ -217,14 +223,17 @@ while True:
                 else:
                     row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                     if row is not None and col is not None:
-                        if event.button == 1:
-                            new_val = 1 if player_grid[row][col] != 1 else -1
-                        elif event.button == 3:
-                            new_val = 0 if player_grid[row][col] != 0 else -1
+                        current_val = player_grid[row][col]
+                        if event.button == 1:  # Clic gauche → noir ou effacer
+                            drag_new_value = -1 if current_val == 1 else 1
+                        elif event.button == 3:  # Clic droit → croix ou effacer
+                            drag_new_value = -1 if current_val == 0 else 0
                         else:
-                            new_val = None
-                        if new_val is not None:
-                            player_grid[row][col] = new_val
+                            drag_new_value = None
+
+
+                        if drag_new_value is not None:
+                            player_grid[row][col] = drag_new_value
                             dragging = True
                             drag_button = event.button
                             dragged_cells = [(row, col)]
@@ -232,26 +241,27 @@ while True:
             dragging = False
             drag_button = None
             dragged_cells = []
+            drag_new_value = None
         elif event.type == pygame.MOUSEMOTION:
             if dragging:
                 row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                 if row is not None and col is not None and (row, col) not in dragged_cells:
                     current_val = player_grid[row][col]
-                    if drag_button == 1:
-                        new_val = 1 if current_val != 1 else -1
-                    elif drag_button == 3:
-                        new_val = 0 if current_val != 0 else -1
-                    else:
-                        new_val = None
-                    if new_val is not None:
-                        player_grid[row][col] = new_val
+                    # Applique uniquement si différent de la nouvelle valeur attendue
+                    if drag_new_value == 1 and current_val != 1:
+                        player_grid[row][col] = 1
                         dragged_cells.append((row, col))
+                    elif drag_new_value == 0 and current_val != 0:
+                        player_grid[row][col] = 0
+                        dragged_cells.append((row, col))
+                    elif drag_new_value == -1:
+                        if current_val == 1 or current_val == 0:
+                            player_grid[row][col] = -1
+                            dragged_cells.append((row, col))
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
             elif event.key == pygame.K_SPACE and game_started:
                 switch_level()
-
-
 

@@ -39,7 +39,7 @@ pygame.display.set_caption("Initialisation...")
 
 # Charger l'image de fond
 try:
-    background_image = pygame.image.load("background.png").convert_alpha()
+    background_image = pygame.image.load("assets/background.png").convert_alpha()
 except FileNotFoundError:
     print("❌ Fichier 'background.png' introuvable.")
     pygame.quit()
@@ -47,7 +47,7 @@ except FileNotFoundError:
 
 # Charger l'image de la croix pour fermer
 try:
-    cross_image = pygame.image.load("exit-cross.png").convert_alpha()
+    cross_image = pygame.image.load("assets/exit-cross.png").convert_alpha()
     CROSS_SIZE = 50
     cross_image = pygame.transform.smoothscale(cross_image, (CROSS_SIZE, CROSS_SIZE))
 except FileNotFoundError:
@@ -89,7 +89,7 @@ toolbar_font = pygame.font.SysFont(None, 24)
 
 # Dimensions de la barre d'outils
 TOOLBAR_HEIGHT = 40
-BUTTON_WIDTH = 80
+BUTTON_WIDTH = 130
 BUTTON_HEIGHT = 30
 BUTTON_MARGIN = 10
 
@@ -259,17 +259,17 @@ def save_nonogram(solution, row_clues, col_clues, background_surface):
         print(f"✅ Sauvegardé sous : {file_path}")
 
 # --- TEST : Encodage + décodage ---
-print("🧪 Début du test encode/decode...")
+#print("🧪 Début du test encode/decode...")
 
 # Encoder la surface en base64
-encoded = surface_to_base64(background_image)
+#encoded = surface_to_base64(background_image)
 
 # Décoder en surface
-decoded_surface = base64_to_surface(encoded)
+#decoded_surface = base64_to_surface(encoded)
 
 # Sauvegarder temporairement comme PNG
-pygame.image.save(decoded_surface, "test_decoded.png")
-print("✅ Image décodée et sauvegardée sous 'test_decoded.png'")
+#pygame.image.save(decoded_surface, "test_decoded.png")
+#print("✅ Image décodée et sauvegardée sous 'test_decoded.png'")
 
 # Boucle principale
 running = True
