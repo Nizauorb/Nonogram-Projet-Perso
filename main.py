@@ -1,15 +1,12 @@
 import pygame
 import sys
 
-#bonjour
-# Constantes
 CELL_SIZE = 40
 GRID_SIZE = 5
 WIDTH = CELL_SIZE * (GRID_SIZE + 6)
 HEIGHT = CELL_SIZE * (GRID_SIZE + 6)
 FPS = 60
 
-# Niveaux
 levels = [
     {
         "solution": [
@@ -51,7 +48,9 @@ player_grid = []
 
 drag_new_value = None
 dragged_cells = []
-start_val = None  # valeur de départ au début du drag
+start_val = None
+drag_start_cell = None
+drag_direction = None
 
 def load_level():
     global solution, row_clues, col_clues, player_grid
@@ -82,7 +81,7 @@ def draw_menu():
     draw_text("Jouer", (start_rect.x + 70, start_rect.y + 15), (255,255,255))
     draw_text("\u00c9diteur", (editor_rect.x + 70, editor_rect.y + 15), (255,255,255))
     draw_text("Quitter", (quit_rect.x + 70, quit_rect.y + 15), (255,255,255))
-    draw_text("Plein écran / Fenêtré", (fullscreen_rect.x + 15, fullscreen_rect.y + 15), (255,255,255))
+    draw_text("Plein \u00e9cran / Fen\u00eat\u00e9", (fullscreen_rect.x + 15, fullscreen_rect.y + 15), (255,255,255))
     rects['start'] = start_rect
     rects['editor'] = editor_rect
     rects['quit'] = quit_rect
@@ -129,7 +128,7 @@ def draw_grid():
 
     cross_rect = draw_cross_button()
     if check_victory():
-        draw_text("Bravo ! Puzzle complété !", (offset_x + CELL_SIZE, offset_y + CELL_SIZE), (0,150,0))
+        draw_text("Bravo ! Puzzle compl\u00e9t\u00e9 !", (offset_x + CELL_SIZE, offset_y + CELL_SIZE), (0,150,0))
     return offset_x, offset_y, cross_rect
 
 def get_cell_from_pos(pos, offset_x, offset_y):
@@ -164,7 +163,6 @@ def toggle_fullscreen():
         screen = pygame.display.set_mode((WIDTH, HEIGHT))
     pygame.mouse.set_pos(mx, my)
 
-# Initialisation
 load_level()
 menu_rects = {}
 dragging = False
@@ -202,7 +200,7 @@ while True:
                 else:
                     row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                     if row is not None and col is not None:
-                        start_val = player_grid[row][col]  # mémoriser la valeur de départ
+                        start_val = player_grid[row][col]
                         current_val = start_val
                         if event.button == 1:
                             drag_new_value = -1 if current_val == 1 else 1
@@ -216,22 +214,36 @@ while True:
                             dragging = True
                             drag_button = event.button
                             dragged_cells = [(row, col)]
+                            drag_start_cell = (row, col)
+                            drag_direction = None
         elif event.type == pygame.MOUSEBUTTONUP:
             dragging = False
             drag_button = None
             dragged_cells = []
             drag_new_value = None
             start_val = None
+            drag_start_cell = None
+            drag_direction = None
         elif event.type == pygame.MOUSEMOTION:
             if dragging:
                 row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                 if row is not None and col is not None and (row, col) not in dragged_cells:
-                    current_val = player_grid[row][col]
-                    # modifier uniquement si valeur actuelle == valeur de départ
-                    if current_val == start_val:
-                        if drag_new_value is not None and current_val != drag_new_value:
-                            player_grid[row][col] = drag_new_value
-                            dragged_cells.append((row, col))
+                    if drag_start_cell:
+                        start_row, start_col = drag_start_cell
+                        if drag_direction is None:
+                            if abs(row - start_row) > abs(col - start_col):
+                                drag_direction = "vertical"
+                            elif abs(col - start_col) > abs(row - start_row):
+                                drag_direction = "horizontal"
+
+                        if drag_direction == "horizontal" and row == start_row:
+                            if player_grid[row][col] == start_val:
+                                player_grid[row][col] = drag_new_value
+                                dragged_cells.append((row, col))
+                        elif drag_direction == "vertical" and col == start_col:
+                            if player_grid[row][col] == start_val:
+                                player_grid[row][col] = drag_new_value
+                                dragged_cells.append((row, col))
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
