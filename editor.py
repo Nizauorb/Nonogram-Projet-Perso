@@ -1,3 +1,4 @@
+import time
 import pygame
 import sys
 import json
@@ -18,6 +19,10 @@ BUTTON_WIDTH = 130
 BUTTON_HEIGHT = 30
 BUTTON_MARGIN = 10
 CROSS_SIZE = 50
+ORIGINAL_WIDTH = 0
+ORIGINAL_HEIGHT = 0
+grid_width = 0
+grid_height = 0
 
 # Couleurs
 DRAW_COLOR = (20, 20, 20, 150)
@@ -92,6 +97,7 @@ SCREEN_WIDTH, SCREEN_HEIGHT = screen.get_size()
 pygame.display.set_caption("Nonogram - Revolution")
 
 toolbar_font = pygame.font.SysFont(None, 24)
+info_font = pygame.font.SysFont(None, 24)  # Pour afficher les dimensions
 
 # ==============================
 # Variables d'état
@@ -158,14 +164,39 @@ def generate_clues(solution):
         cols.append(get_groups(column))
     return rows, cols
 
-def save_nonogram(solution, row_clues, col_clues, bg_surf):
+def pretty_format_list(data, indent=4, level=0):
+    """Formateur personnalisé pour les listes imbriquées."""
+    if not isinstance(data, list):
+        return json.dumps(data)
+    
+    # Si c'est une liste de valeurs simples, on la garde sur une seule ligne
+    if all(not isinstance(x, list) for x in data):
+        return json.dumps(data)
+
+    # Sinon, on formate ligne par ligne
+    spaces = ' ' * (level * indent)
+    inner_spaces = ' ' * ((level + 1) * indent)
+    lines = []
+    for item in data:
+        lines.append(f"{inner_spaces}{pretty_format_list(item, indent, level + 1)}")
+    return '[\n' + ',\n'.join(lines) + f'\n{spaces}]'
+
+def save_nonogram(solution, row_clues, col_clues, background_surface):
+    # Récupérer les dimensions de la grille
+    grid_height = len(solution)
+    grid_width = len(solution[0]) if grid_height > 0 else 0
+
     data = {
         "version": "1.0",
+        "grid_width": grid_width,
+        "grid_height": grid_height,
         "solution": solution,
         "row_clues": row_clues,
         "col_clues": col_clues,
-        "background_image_b64": surface_to_base64(bg_surf)
+        "background_image_b64": surface_to_base64(background_surface),
+        "timestamp": int(time.time())
     }
+
     root = Tk()
     root.withdraw()
     file_path = filedialog.asksaveasfilename(
@@ -173,10 +204,19 @@ def save_nonogram(solution, row_clues, col_clues, bg_surf):
         filetypes=[("Nonogram File", "*.nonogram")],
         title="Enregistrer le nonogram"
     )
-    if file_path:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, separators=(',', ':'), ensure_ascii=False)
-        print(f"✅ Sauvegardé sous : {file_path}")
+    if not file_path:
+        return
+
+    # On construit le JSON manuellement pour garder le format lisible
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("{\n")
+        items = []
+        for key, value in data.items():
+            formatted_value = pretty_format_list(value, level=1) if isinstance(value, list) else json.dumps(value)
+            items.append(f'    "{key}": {formatted_value}')
+        f.write(',\n'.join(items))
+        f.write("\n}\n")
+    print(f"✅ Sauvegardé sous : {file_path}")
 
 def load_nonogram():
     root = Tk()
@@ -190,17 +230,25 @@ def load_nonogram():
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             data = json.load(f)
+
+        # Charger l'image de fond
         bg_surface = base64_to_surface(data["background_image_b64"])
+
+        # Appliquer la solution
         apply_solution(data["solution"])
+
         print("✅ Fichier chargé avec succès.")
+
         return {
-            "solution": data["solution"],
-            "row_clues": data["row_clues"],
-            "col_clues": data["col_clues"],
-            "background": bg_surface
+            "solution": data.get("solution"),
+            "row_clues": data.get("row_clues"),
+            "col_clues": data.get("col_clues"),
+            "background": bg_surface,
+            "grid_width": data.get("grid_width"),
+            "grid_height": data.get("grid_height")
         }
     except Exception as e:
-        print(f"❌ Erreur lors du chargement : {e}")
+        print(f"❌ Erreur lors du chargement du fichier : {e}")
         return None
 
 def draw_toolbar(screen):
@@ -224,6 +272,10 @@ def draw_toolbar(screen):
     text = toolbar_font.render("Changer BG", True, TEXT_COLOR)
     screen.blit(text, text.get_rect(center=btn_change_bg_rect.center))
 
+    # Affichage des dimensions
+    grid_text = info_font.render(f"Grille : {grid_width} × {grid_height}", True, TEXT_COLOR)
+    screen.blit(grid_text, (SCREEN_WIDTH - 200, 10))
+
 # ==============================
 # Boucle principale
 # ==============================
@@ -242,6 +294,27 @@ while running:
                 if loaded_data:
                     background_image = loaded_data["background"]
                     zoom_factor = INITIAL_ZOOM
+
+                    # Récupérer les dimensions depuis le fichier
+                    grid_width = loaded_data.get("grid_width", 0)
+                    grid_height = loaded_data.get("grid_height", 0)
+
+                    # Si les dimensions sont présentes → ajuster ORIGINAL_WIDTH/HEIGHT
+                    if grid_width > 0 and grid_height > 0:
+                        ORIGINAL_WIDTH = grid_width * CELL_SIZE_BASE
+                        ORIGINAL_HEIGHT = grid_height * CELL_SIZE_BASE
+                    else:
+                        # Sinon, utiliser la taille de l'image de fond
+                        ORIGINAL_WIDTH, ORIGINAL_HEIGHT = background_image.get_size()
+
+                    # Redimensionner la surface de dessin
+                    new_drawing = pygame.Surface((ORIGINAL_WIDTH, ORIGINAL_HEIGHT), pygame.SRCALPHA)
+                    new_drawing.fill(ERASE_COLOR)
+                    drawing_surface = new_drawing
+
+                    # Si une solution est présente, l'appliquer
+                    if "solution" in loaded_data:
+                        apply_solution(loaded_data["solution"])
             elif btn_save_rect.collidepoint(x_screen, y_screen):
                 solution = get_solution()
                 row_clues, col_clues = generate_clues(solution)
