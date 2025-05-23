@@ -135,10 +135,27 @@ def get_solution():
         solution.append(row)
     return solution
 
+def get_groups(line):
+    groups = []
+    count = 0
+    for value in line:
+        if value == 1:
+            count += 1
+        elif count > 0:
+            groups.append(count)
+            count = 0
+    if count > 0:
+        groups.append(count)
+    return groups
+
 def generate_clues(solution):
-    def group_bits(line): return [len(g) for g in ' '.join(str(x) for x in line).split('0') if g]
-    rows = [group_bits(row) for row in solution]
-    cols = [group_bits([solution[row][col] for row in range(len(solution))]) for col in range(len(solution[0]))]
+    rows = [get_groups(row) for row in solution]
+    cols = []
+    width = len(solution[0]) if solution else 0
+    height = len(solution)
+    for col_idx in range(width):
+        column = [solution[row_idx][col_idx] for row_idx in range(height)]
+        cols.append(get_groups(column))
     return rows, cols
 
 def save_nonogram(solution, row_clues, col_clues, bg_surf):
