@@ -24,6 +24,8 @@ ORIGINAL_HEIGHT = 0
 grid_width = 0
 grid_height = 0
 
+
+
 # Couleurs
 DRAW_COLOR = (20, 20, 20, 150)
 ERASE_COLOR = (0, 0, 0, 0)
@@ -105,10 +107,24 @@ info_font = pygame.font.SysFont(None, 24)  # Pour afficher les dimensions
 zoom_factor = INITIAL_ZOOM
 drawing = False
 erasing = False
+offset_x = (SCREEN_WIDTH - ORIGINAL_WIDTH * zoom_factor) // 2
+offset_y = (SCREEN_HEIGHT - ORIGINAL_HEIGHT * zoom_factor) // 2
+
 
 # ==============================
 # Fonctions métiers
 # ==============================
+def apply_zoom(mouse_x, mouse_y, zoom_before, zoom_after):
+    #Calcule le nouvel offset_x et offset_y pour que le zoom soit centré sur la souris.
+    
+    dx = mouse_x - offset_x
+    dy = mouse_y - offset_y
+
+    new_offset_x = mouse_x - dx * zoom_after / zoom_before
+    new_offset_y = mouse_y - dy * zoom_after / zoom_before
+
+    return int(new_offset_x), int(new_offset_y)
+
 def apply_solution(solution):
     global drawing_surface, CELL_SIZE_BASE, ORIGINAL_WIDTH, ORIGINAL_HEIGHT
     rows = len(solution)
@@ -250,6 +266,7 @@ def load_nonogram():
     except Exception as e:
         print(f"❌ Erreur lors du chargement du fichier : {e}")
         return None
+    
 
 def draw_toolbar(screen):
     pygame.draw.rect(screen, TOOLBAR_COLOR, (0, 0, SCREEN_WIDTH, TOOLBAR_HEIGHT))
@@ -276,6 +293,8 @@ def draw_toolbar(screen):
     grid_text = info_font.render(f"Grille : {grid_width} × {grid_height}", True, TEXT_COLOR)
     screen.blit(grid_text, (SCREEN_WIDTH - 200, 10))
 
+   
+
 # ==============================
 # Boucle principale
 # ==============================
@@ -293,7 +312,11 @@ while running:
                 loaded_data = load_nonogram()
                 if loaded_data:
                     background_image = loaded_data["background"]
-                    zoom_factor = INITIAL_ZOOM
+                    zoom_factor = 0.5  # Réinitialiser le zoom
+                    img_w = int(ORIGINAL_WIDTH * zoom_factor)
+                    img_h = int(ORIGINAL_HEIGHT * zoom_factor)
+                    offset_x = (SCREEN_WIDTH - img_w) // 2
+                    offset_y = (SCREEN_HEIGHT - img_h) // 2
 
                     # Récupérer les dimensions depuis le fichier
                     grid_width = loaded_data.get("grid_width", 0)
@@ -345,8 +368,6 @@ while running:
             # Dessin / Effacement
             img_w = int(ORIGINAL_WIDTH * zoom_factor)
             img_h = int(ORIGINAL_HEIGHT * zoom_factor)
-            offset_x = (SCREEN_WIDTH - img_w) // 2
-            offset_y = (SCREEN_HEIGHT - img_h) // 2
             rel_x = x_screen - offset_x
             rel_y = y_screen - offset_y
             x_orig, y_orig = int(rel_x / zoom_factor), int(rel_y / zoom_factor)
@@ -361,9 +382,30 @@ while running:
                 erasing = True
                 pygame.draw.rect(drawing_surface, ERASE_COLOR, rect)
             elif event.button == 4:  # Molette haut → zoom +
+                old_zoom = zoom_factor
                 zoom_factor = min(zoom_factor * ZOOM_STEP, MAX_ZOOM)
+                x_mouse, y_mouse = pygame.mouse.get_pos()
+                offset_x, offset_y = apply_zoom(x_mouse, y_mouse, old_zoom, zoom_factor)
+
+                # Recentre si le zoom est très petit
+                if zoom_factor <= 0.5:
+                    img_w = int(ORIGINAL_WIDTH * zoom_factor)
+                    img_h = int(ORIGINAL_HEIGHT * zoom_factor)
+                    offset_x = (SCREEN_WIDTH - img_w) // 2
+                    offset_y = (SCREEN_HEIGHT - img_h) // 2
+
             elif event.button == 5:  # Molette bas → zoom -
+                old_zoom = zoom_factor
                 zoom_factor = max(zoom_factor / ZOOM_STEP, MIN_ZOOM)
+                x_mouse, y_mouse = pygame.mouse.get_pos()
+                offset_x, offset_y = apply_zoom(x_mouse, y_mouse, old_zoom, zoom_factor)
+
+                # Recentre si le zoom est très petit
+                if zoom_factor <= 0.5:
+                    img_w = int(ORIGINAL_WIDTH * zoom_factor)
+                    img_h = int(ORIGINAL_HEIGHT * zoom_factor)
+                    offset_x = (SCREEN_WIDTH - img_w) // 2
+                    offset_y = (SCREEN_HEIGHT - img_h) // 2
 
         elif event.type == pygame.MOUSEBUTTONUP:
             drawing = False
@@ -388,8 +430,6 @@ while running:
         x_screen, y_screen = pygame.mouse.get_pos()
         img_w = int(ORIGINAL_WIDTH * zoom_factor)
         img_h = int(ORIGINAL_HEIGHT * zoom_factor)
-        offset_x = (SCREEN_WIDTH - img_w) // 2
-        offset_y = (SCREEN_HEIGHT - img_h) // 2
         rel_x = x_screen - offset_x
         rel_y = y_screen - offset_y
         x_orig, y_orig = int(rel_x / zoom_factor), int(rel_y / zoom_factor)
@@ -404,9 +444,6 @@ while running:
     img_h = int(ORIGINAL_HEIGHT * zoom_factor)
     scaled_bg = pygame.transform.scale(background_image, (img_w, img_h))
     scaled_draw = pygame.transform.scale(drawing_surface, (img_w, img_h))
-    offset_x = (SCREEN_WIDTH - img_w) // 2
-    offset_y = (SCREEN_HEIGHT - img_h) // 2
-
     screen.fill(BACKGROUND_COLOR)
     screen.blit(scaled_bg, (offset_x, offset_y))
     screen.blit(scaled_draw, (offset_x, offset_y))
