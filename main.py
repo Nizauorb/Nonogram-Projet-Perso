@@ -51,6 +51,7 @@ player_grid = []
 
 drag_new_value = None
 dragged_cells = []
+start_val = None  # valeur de départ au début du drag
 
 def load_level():
     global solution, row_clues, col_clues, player_grid
@@ -201,7 +202,8 @@ while True:
                 else:
                     row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                     if row is not None and col is not None:
-                        current_val = player_grid[row][col]
+                        start_val = player_grid[row][col]  # mémoriser la valeur de départ
+                        current_val = start_val
                         if event.button == 1:
                             drag_new_value = -1 if current_val == 1 else 1
                         elif event.button == 3:
@@ -219,36 +221,21 @@ while True:
             drag_button = None
             dragged_cells = []
             drag_new_value = None
+            start_val = None
         elif event.type == pygame.MOUSEMOTION:
             if dragging:
                 row, col = get_cell_from_pos(event.pos, offset_x, offset_y)
                 if row is not None and col is not None and (row, col) not in dragged_cells:
                     current_val = player_grid[row][col]
-
-                    # On empêche la modification des cases déjà marquées comme 2 (rond), sauf si on efface
-                    if current_val == 2 and drag_new_value != -1:
-                        pass  # Ne pas modifier les cercles pendant le drag si on ne les efface pas
-                    else : 
-                        if drag_new_value == 1 and current_val != 1:
-                            player_grid[row][col] = 1
+                    # modifier uniquement si valeur actuelle == valeur de départ
+                    if current_val == start_val:
+                        if drag_new_value is not None and current_val != drag_new_value:
+                            player_grid[row][col] = drag_new_value
                             dragged_cells.append((row, col))
-
-                        elif drag_new_value == 0 and current_val != 0:
-                            player_grid[row][col] = 0
-                            dragged_cells.append((row, col))
-            
-                        elif drag_new_value == 2 and current_val != 2:
-                            player_grid[row][col] = 2
-                            dragged_cells.append((row, col))
-            
-                        elif drag_new_value == -1:
-                            if current_val in [0, 1, 2]:
-                                player_grid[row][col] = -1
-                                dragged_cells.append((row, col))
 
         elif event.type == pygame.KEYDOWN:
             if event.key == pygame.K_ESCAPE:
                 pygame.quit()
                 sys.exit()
             elif event.key == pygame.K_SPACE and game_started:
-                switch_level() 
+                switch_level()
