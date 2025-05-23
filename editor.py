@@ -1,3 +1,4 @@
+import time
 import pygame
 import sys
 import json
@@ -158,14 +159,39 @@ def generate_clues(solution):
         cols.append(get_groups(column))
     return rows, cols
 
-def save_nonogram(solution, row_clues, col_clues, bg_surf):
+def pretty_format_list(data, indent=4, level=0):
+    """Formateur personnalisé pour les listes imbriquées."""
+    if not isinstance(data, list):
+        return json.dumps(data)
+    
+    # Si c'est une liste de valeurs simples, on la garde sur une seule ligne
+    if all(not isinstance(x, list) for x in data):
+        return json.dumps(data)
+
+    # Sinon, on formate ligne par ligne
+    spaces = ' ' * (level * indent)
+    inner_spaces = ' ' * ((level + 1) * indent)
+    lines = []
+    for item in data:
+        lines.append(f"{inner_spaces}{pretty_format_list(item, indent, level + 1)}")
+    return '[\n' + ',\n'.join(lines) + f'\n{spaces}]'
+
+def save_nonogram(solution, row_clues, col_clues, background_surface):
+    # Récupérer les dimensions de la grille
+    grid_height = len(solution)
+    grid_width = len(solution[0]) if grid_height > 0 else 0
+
     data = {
         "version": "1.0",
+        "grid_width": grid_width,
+        "grid_height": grid_height,
         "solution": solution,
         "row_clues": row_clues,
         "col_clues": col_clues,
-        "background_image_b64": surface_to_base64(bg_surf)
+        "background_image_b64": surface_to_base64(background_surface),
+        "timestamp": int(time.time())
     }
+
     root = Tk()
     root.withdraw()
     file_path = filedialog.asksaveasfilename(
@@ -173,10 +199,19 @@ def save_nonogram(solution, row_clues, col_clues, bg_surf):
         filetypes=[("Nonogram File", "*.nonogram")],
         title="Enregistrer le nonogram"
     )
-    if file_path:
-        with open(file_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, separators=(',', ':'), ensure_ascii=False)
-        print(f"✅ Sauvegardé sous : {file_path}")
+    if not file_path:
+        return
+
+    # On construit le JSON manuellement pour garder le format lisible
+    with open(file_path, 'w', encoding='utf-8') as f:
+        f.write("{\n")
+        items = []
+        for key, value in data.items():
+            formatted_value = pretty_format_list(value, level=1) if isinstance(value, list) else json.dumps(value)
+            items.append(f'    "{key}": {formatted_value}')
+        f.write(',\n'.join(items))
+        f.write("\n}\n")
+    print(f"✅ Sauvegardé sous : {file_path}")
 
 def load_nonogram():
     root = Tk()
