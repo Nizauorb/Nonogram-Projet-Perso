@@ -150,7 +150,7 @@ def draw_grid():
 
     cross_rect = draw_cross_button()
     if check_victory():
-        draw_text("Bravo ! Puzzle compl\u00e9t\u00e9 !", (offset_x + CELL_SIZE, offset_y + CELL_SIZE), (0,150,0))
+        draw_text("Bravo ! Puzzle complete !", (offset_x + CELL_SIZE, offset_y + CELL_SIZE), (0,150,0))
     return offset_x, offset_y, cross_rect
 
 def get_cell_from_pos(pos, offset_x, offset_y):
